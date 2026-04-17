@@ -63,15 +63,34 @@ The Raspberry Pi 5 acts as a WiFi access point with transparent traffic forwardi
 
 ## Quick Start
 
+### 0. Install Kali Linux on Raspberry Pi 5
+
+📖 **Start here:** [Kali Linux Installation Guide](docs/kali-installation.md)
+
+This comprehensive guide covers:
+- Downloading and flashing Kali ARM image
+- Headless setup via SSH
+- Finding the Pi's IP address on your network
+- Initial configuration and security hardening
+
+**Quick connection:** `ssh kali@kali-raspberrypi`
+
 ### 1. Raspberry Pi Setup
 
+After Kali is installed and you have SSH access:
+
 ```bash
-# Clone this repository
+# Clone this repository on your analysis machine
 git clone https://github.com/schladt/MitM-Pi.git
 cd MitM-Pi
 
-# Run the Pi setup script
-sudo ./pi-setup/setup.sh
+# Copy setup scripts to the Pi
+scp -r pi-setup/ kali@kali-raspberrypi:~/
+
+# SSH to the Pi and run setup
+ssh kali@kali-raspberrypi
+cd ~/pi-setup
+sudo ./setup.sh
 ```
 
 ### 2. Analysis Machine Setup
