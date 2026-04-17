@@ -33,13 +33,13 @@ usage() {
     echo "Options:"
     echo "  -p PORT       Proxy port (default: 8080)"
     echo "  -d DIR        Capture directory (default: ~/Desktop/mitm-captures)"
-    echo "  -w            Start mitmweb (web interface) instead of mitmdump"
+    echo "  -c            Start in console mode (mitmdump) instead of web UI"
     echo "  -s            Enable security analysis addon"
     echo "  -h            Show this help"
     echo ""
     echo "Examples:"
-    echo "  $0                    # Start with defaults"
-    echo "  $0 -w                 # Start with web UI"
+    echo "  $0                    # Start with web UI (default)"
+    echo "  $0 -c                 # Start in headless console mode"
     echo "  $0 -p 8888 -s         # Custom port with security analysis"
     echo ""
     echo "Environment variables:"
@@ -50,14 +50,14 @@ usage() {
 }
 
 # Parse arguments
-WEB_MODE=false
+WEB_MODE=true  # Default to web mode
 SECURITY_MODE=false
 
-while getopts "p:d:wsh" opt; do
+while getopts "p:d:csh" opt; do
     case $opt in
         p) PORT="$OPTARG" ;;
         d) CAPTURE_DIR="$OPTARG" ;;
-        w) WEB_MODE=true ;;
+        c) WEB_MODE=false ;;  # Console/headless mode
         s) SECURITY_MODE=true ;;
         h) usage ;;
         *) usage ;;
@@ -254,19 +254,19 @@ if [ "$WEB_MODE" = true ]; then
     echo ""
     
     mitmweb \
-        --mode transparent \
+        --mode regular \
         --listen-host 0.0.0.0 \
         --listen-port "$PORT" \
         --save-stream-file "$DUMP_FILE" \
         --set hardump="$HAR_FILE" \
         -s "$ADDONS"
 else
-    echo -e "${YELLOW}Running in headless mode (mitmdump)${NC}"
+    echo -e "${YELLOW}Running in console mode (mitmdump)${NC}"
     echo -e "${YELLOW}Press Ctrl+C to stop${NC}"
     echo ""
     
     mitmdump \
-        --mode transparent \
+        --mode regular \
         --listen-host 0.0.0.0 \
         --listen-port "$PORT" \
         --save-stream-file "$DUMP_FILE" \

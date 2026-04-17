@@ -8,11 +8,15 @@ This tool is designed for **authorized security testing only**. Only use this de
 
 ## Overview
 
-MitM-Pi transforms a Raspberry Pi 5 into a transparent MITM proxy for analyzing and testing IoT device security. IoT devices connect to a WiFi access point hosted on the Pi, and all traffic is automatically routed to a proxy interceptor (Burp Suite, mitmproxy, etc.) running on your analysis machine.
+MitM-Pi transforms a Raspberry Pi 5 into a transparent MITM proxy for analyzing and testing IoT device security. IoT devices connect to a WiFi access point hosted on the Pi, and traffic can be either:
+
+1. **Active Mode (Default):** Routed to a proxy interceptor (Burp Suite, mitmproxy) on your analysis machine for decryption and modification
+2. **Passive Mode:** All traffic monitored directly on the Pi for encrypted traffic analysis without decryption
 
 ### Key Features
 
 - 🔒 **Transparent Operation** - IoT devices connect normally with no proxy configuration required
+- 🎭 **Dual Operating Modes** - Active MITM with proxy OR passive monitoring without decryption
 - 📡 **Multiple Network Interfaces** - Built-in ethernet, WiFi, and support for ALFA AWUS1900 USB adapter
 - 🖥️ **Multi-Platform Analysis** - Supports macOS and Linux analysis machines
 - 🔍 **Flexible Proxy Support** - Works with Burp Suite, mitmproxy, and other intercepting proxies
@@ -20,21 +24,30 @@ MitM-Pi transforms a Raspberry Pi 5 into a transparent MITM proxy for analyzing 
 - 🔐 **Security Analysis** - mitmproxy addon for detecting sensitive data leaks (API keys, tokens, passwords)
 - 🚀 **Easy Setup** - Automated scripts for both Pi and analysis machine configuration
 - 📱 **Mobile Device Support** - Certificate installation guides for Android devices
--
 
 ## Architecture
 
+### Active Mode (Default)
 ```
 IoT Device (WiFi) 
     ↓
 Raspberry Pi 5 (WiFi AP)
-    ↓ (routing/forwarding)
+    ↓ (HTTP/HTTPS redirect)
 Analysis Machine (Ethernet) ← Burp Suite/mitmproxy
     ↓
 Internet
 ```
 
-The Raspberry Pi 5 acts as a WiFi access point with transparent traffic forwarding to your analysis machine, where you can intercept, modify, and analyze all HTTP/HTTPS traffic.
+### Passive Mode
+```
+IoT Device (WiFi) 
+    ↓
+Raspberry Pi 5 (WiFi AP + tcpdump)
+    ↓ (NAT only, no redirect)
+Internet
+```
+
+The Raspberry Pi 5 acts as a WiFi access point. In **active mode**, HTTP/HTTPS traffic is transparently forwarded to your analysis machine for interception. In **passive mode**, all traffic is routed normally while being monitored on the Pi (ideal for encrypted protocols like MQTT over TLS).
 
 ## Hardware Requirements
 
@@ -93,7 +106,12 @@ scp -r pi-setup/ kali@kali-raspberrypi:~/
 # SSH to the Pi and run setup
 ssh kali@kali-raspberrypi
 cd ~/pi-setup
+
+# Active mode (default) - with proxy redirection
 sudo ./setup.sh
+
+# OR: Passive mode - monitoring only, no proxy
+sudo ./setup.sh --passive
 ```
 
 ### 2. Analysis Machine Setup
@@ -158,17 +176,17 @@ Captures are saved to `~/Desktop/mitm-captures/` and can be analyzed in Wireshar
 brew install mitmproxy  # macOS
 # or: sudo apt install mitmproxy  # Linux
 
-# Start capture with web interface
+# Start capture with web interface (default)
 cd analysis-setup
-./capture-mitmproxy.sh -w
+./capture-mitmproxy.sh
 
-# Web interface: http://localhost:8081
+# Web interface automatically opens at: http://localhost:8081
 
 # With security analysis (detects API keys, passwords, tokens)
 ./capture-mitmproxy.sh -s
 
-# Headless mode (for automation)
-./capture-mitmproxy.sh
+# Console/headless mode (for automation)
+./capture-mitmproxy.sh -c
 ```
 
 Flows are saved in multiple formats:
@@ -188,12 +206,13 @@ MitM-Pi/
 ├── README.md
 ├── .gitignore
 ├── pi-setup/                          # Raspberry Pi setup scripts and configs
-│   ├── setup.sh                       # Automated Pi configuration
+│   ├── setup.sh                       # Automated Pi configuration (supports --passive)
 │   ├── uninstall.sh                   # Reset Pi to normal configuration
 │   └── configs/
 │       ├── hostapd.conf              # WiFi AP configuration
 │       ├── dnsmasq.conf              # DHCP/DNS configuration
-│       └── routing-rules.sh          # iptables routing rules
+│       ├── routing-rules.sh          # Active mode: HTTP/HTTPS proxy redirection
+│       └── routing-rules-passive.sh  # Passive mode: NAT only, no proxy
 ├── analysis-setup/                    # Analysis machine scripts
 │   ├── install-burp-cert-android.sh  # Android certificate installer
 │   ├── capture-traffic.sh            # Packet capture (network/proxy modes)
@@ -220,11 +239,22 @@ The default configuration creates a WiFi AP with:
 
 Edit `pi-setup/configs/hostapd.conf` to customize.
 
-### Proxy Routing
+### Operating Modes
 
-By default, all traffic is forwarded to your analysis machine on port 8080. The setup script will automatically detect your analysis machine's IP address.
+**Active Mode (Default):**
+- HTTP (port 80) and HTTPS (port 443) redirected to analysis machine proxy on port 8080
+- Requires running proxy (Burp Suite, mitmproxy) on analysis machine
+- Best for: Mobile apps, web traffic, HTTP-based IoT devices
+- Setup: `sudo ./setup.sh`
 
-Edit `pi-setup/configs/routing-rules.sh` to customize routing behavior.
+**Passive Mode:**
+- All traffic routed through NAT without proxy redirection
+- Traffic monitored directly on Pi using tcpdump
+- Best for: Encrypted protocols (MQTT over TLS), traffic analysis, connection patterns
+- Setup: `sudo ./setup.sh --passive`
+- Monitor traffic: `ssh kali@kali-raspberrypi "sudo tcpdump -i wlan1 -w /tmp/capture.pcap"`
+
+Edit `pi-setup/configs/routing-rules.sh` or `routing-rules-passive.sh` to customize routing behavior.
 
 ## Documentation
 

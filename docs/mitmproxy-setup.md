@@ -26,19 +26,23 @@ mitmproxy includes three tools:
 
 ## Setup for MitM-Pi
 
-### 1. Start mitmproxy in Transparent Mode
+### 1. Start mitmproxy in Regular Mode
+
+Since the Raspberry Pi handles transparent redirection via iptables, mitmproxy on your analysis machine should run in **regular mode** (not transparent):
 
 ```bash
 # Option 1: Web interface (recommended for beginners)
-mitmweb --mode transparent --listen-host 0.0.0.0 --listen-port 8080
+mitmweb --mode regular --listen-host 0.0.0.0 --listen-port 8080
 
 # Option 2: Console interface
-mitmproxy --mode transparent --listen-host 0.0.0.0 --listen-port 8080
+mitmproxy --mode regular --listen-host 0.0.0.0 --listen-port 8080
 
 # Option 3: Headless with flow logging
-mitmdump --mode transparent --listen-host 0.0.0.0 --listen-port 8080 \
+mitmdump --mode regular --listen-host 0.0.0.0 --listen-port 8080 \
   --save-stream-file ~/Desktop/mitm-flows.dump
 ```
+
+**Why regular mode?** The Pi's iptables rules handle transparent redirection. mitmproxy just needs to act as a standard HTTP proxy to receive the forwarded traffic.
 
 **Access mitmweb**: http://localhost:8081
 
@@ -65,12 +69,14 @@ adb push $HASH.0 /sdcard/
 
 ### 3. Configure Pi Routing for mitmproxy
 
-If you're switching from Burp Suite, no changes needed! The same iptables rules work:
+The Pi's iptables rules work the same for both Burp Suite and mitmproxy - no changes needed! Both tools listen on port 8080 in regular proxy mode and receive transparently redirected traffic from the Pi.
 
 ```bash
-# On Pi - routing rules already configured
+# On Pi - routing rules already configured by setup.sh
 # Traffic on port 80 and 443 redirects to analysis machine port 8080
 ```
+
+**Note:** You don't need to configure transparent mode on your analysis machine. The Pi handles the transparent redirection, and mitmproxy simply receives the forwarded traffic as a regular HTTP proxy.
 
 ### 4. Test Connection
 

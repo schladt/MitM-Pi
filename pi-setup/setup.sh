@@ -4,7 +4,8 @@
 # Configures Raspberry Pi 5 with Kali Linux as a transparent MITM device
 # for IoT security testing
 #
-# Usage: sudo ./setup.sh
+# Usage: sudo ./setup.sh [--passive]
+#   --passive: Passive monitoring mode (no proxy redirection, all traffic monitored on Pi)
 #
 
 # Exit on error
@@ -26,6 +27,15 @@ echo "║     Transparent MITM Device for IoT Security Testing     ║"
 echo "║                                                           ║"
 echo "╚═══════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
+
+# Parse command line arguments
+PASSIVE_MODE=false
+if [ "$1" = "--passive" ]; then
+    PASSIVE_MODE=true
+    echo -e "${BLUE}Running in PASSIVE MONITORING mode${NC}"
+    echo -e "${YELLOW}⚠ No proxy redirection - all traffic monitored on Pi${NC}"
+    echo ""
+fi
 
 # Check if running as root
 if [ "$EUID" -ne 0 ]; then 
@@ -208,30 +218,48 @@ configure_dnsmasq() {
 configure_routing() {
     echo -e "${BLUE}[7/7] Configuring traffic routing...${NC}"
     
-    # Make routing script executable
-    chmod +x configs/routing-rules.sh
-    
-    # Update interface names in routing script
-    sed -i "s/^WLAN_INTERFACE=.*/WLAN_INTERFACE=\"$WLAN_INTERFACE\"/" configs/routing-rules.sh
-    
-    # Ask for analysis machine IP
-    echo -e "${YELLOW}Enter the IP address of your analysis machine${NC}"
-    echo -e "${YELLOW}(the machine running Burp Suite, mitmproxy, etc.):${NC}"
-    read -p "Analysis Machine IP: " ANALYSIS_IP
-    
-    if [ -z "$ANALYSIS_IP" ]; then
-        echo -e "${RED}Error: Analysis machine IP cannot be empty${NC}"
-        exit 1
+    if [ "$PASSIVE_MODE" = true ]; then
+        # Passive monitoring mode - no proxy redirection
+        echo -e "${YELLOW}Configuring passive monitoring mode...${NC}"
+        
+        # Make routing script executable
+        chmod +x configs/routing-rules-passive.sh
+        
+        # Run passive routing configuration
+        bash configs/routing-rules-passive.sh
+        
+        echo -e "${GREEN}[✓] Passive routing configured (no proxy redirection)${NC}"
+        echo -e "${YELLOW}  All traffic monitored on Pi, use tcpdump for capture${NC}"
+    else
+        # Active MITM mode with proxy redirection
+        echo -e "${YELLOW}Configuring active MITM mode with proxy redirection...${NC}"
+        
+        # Make routing script executable
+        chmod +x configs/routing-rules.sh
+        
+        # Update interface names in routing script
+        sed -i "s/^WLAN_INTERFACE=.*/WLAN_INTERFACE=\"$WLAN_INTERFACE\"/" configs/routing-rules.sh
+        
+        # Ask for analysis machine IP
+        echo -e "${YELLOW}Enter the IP address of your analysis machine${NC}"
+        echo -e "${YELLOW}(the machine running Burp Suite, mitmproxy, etc.):${NC}"
+        read -p "Analysis Machine IP: " ANALYSIS_IP
+        
+        if [ -z "$ANALYSIS_IP" ]; then
+            echo -e "${RED}Error: Analysis machine IP cannot be empty${NC}"
+            exit 1
+        fi
+        
+        # Update analysis machine IP in routing script
+        sed -i "s/^ANALYSIS_MACHINE_IP=.*/ANALYSIS_MACHINE_IP=\"$ANALYSIS_IP\"/" configs/routing-rules.sh
+        
+        # Run routing configuration
+        bash configs/routing-rules.sh
+        
+        echo -e "${GREEN}[✓] Active MITM routing configured${NC}"
+        echo -e "${YELLOW}  HTTP/HTTPS redirected to $ANALYSIS_IP:8080${NC}"
     fi
     
-    # Update analysis machine IP in routing script
-    sed -i "s/^ANALYSIS_MACHINE_IP=.*/ANALYSIS_MACHINE_IP=\"$ANALYSIS_IP\"/" configs/routing-rules.sh
-    
-    # Run routing configuration
-    echo -e "${YELLOW}Running routing configuration...${NC}"
-    bash configs/routing-rules.sh
-    
-    echo -e "${GREEN}[✓] Routing configured${NC}"
     echo ""
 }
 
@@ -280,8 +308,12 @@ display_status() {
     echo ""
     echo -e "${BLUE}Network Configuration:${NC}"
     echo -e "  DHCP Range: ${GREEN}192.168.100.10 - 192.168.100.250${NC}"
-    echo -e "  Analysis Machine: ${GREEN}$ANALYSIS_IP${NC}"
-    echo -e "  Proxy Port: ${GREEN}8080${NC}"
+    if [ "$PASSIVE_MODE" = true ]; then
+        echo -e "  Mode: ${YELLOW}Passive Monitoring (no proxy)${NC}"
+    else
+        echo -e "  Analysis Machine: ${GREEN}$ANALYSIS_IP${NC}"
+        echo -e "  Proxy Port: ${GREEN}8080${NC}"
+    fi
     echo ""
     echo -e "${BLUE}Service Status:${NC}"
     systemctl status hostapd --no-pager | grep Active
@@ -289,9 +321,15 @@ display_status() {
     echo ""
     echo -e "${YELLOW}Next Steps:${NC}"
     echo -e "  1. ${GREEN}Change the WiFi password${NC} (edit /etc/hostapd/hostapd.conf)"
-    echo -e "  2. ${GREEN}Configure your proxy${NC} on $ANALYSIS_IP:8080"
-    echo -e "  3. ${GREEN}Connect an IoT device${NC} to the MitM-Pi WiFi network"
-    echo -e "  4. ${GREEN}Start intercepting traffic${NC} in your proxy tool"
+    if [ "$PASSIVE_MODE" = true ]; then
+        echo -e "  2. ${GREEN}Connect an IoT device${NC} to the MitM-Pi WiFi network"
+        echo -e "  3. ${GREEN}Monitor traffic on Pi${NC} with tcpdump or wireshark"
+        echo -e "     Example: ${GREEN}sudo tcpdump -i wlan1 -w /tmp/capture.pcap${NC}"
+    else
+        echo -e "  2. ${GREEN}Configure your proxy${NC} on $ANALYSIS_IP:8080"
+        echo -e "  3. ${GREEN}Connect an IoT device${NC} to the MitM-Pi WiFi network"
+        echo -e "  4. ${GREEN}Start intercepting traffic${NC} in your proxy tool"
+    fi
     echo ""
     echo -e "${YELLOW}Verification Commands:${NC}"
     echo -e "  Check hostapd: ${GREEN}sudo systemctl status hostapd${NC}"
