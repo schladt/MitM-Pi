@@ -12,12 +12,15 @@ MitM-Pi transforms a Raspberry Pi 5 into a transparent MITM proxy for analyzing 
 
 ### Key Features
 
-- 🔒 **Transparent Operation** - IoT devices connect normally with minimal configuration
+- 🔒 **Transparent Operation** - IoT devices connect normally with no proxy configuration required
 - 📡 **Multiple Network Interfaces** - Built-in ethernet, WiFi, and support for ALFA AWUS1900 USB adapter
-- 🖥️ **Multi-Platform Analysis** - Supports macOS and Ubuntu Linux analysis machines
+- 🖥️ **Multi-Platform Analysis** - Supports macOS and Linux analysis machines
 - 🔍 **Flexible Proxy Support** - Works with Burp Suite, mitmproxy, and other intercepting proxies
-- 📦 **Packet Capture** - Built-in traffic capture capabilities
+- 📦 **Packet Capture** - Built-in traffic capture scripts with multiple modes
+- 🔐 **Security Analysis** - mitmproxy addon for detecting sensitive data leaks (API keys, tokens, passwords)
 - 🚀 **Easy Setup** - Automated scripts for both Pi and analysis machine configuration
+- 📱 **Mobile Device Support** - Certificate installation guides for Android devices
+-
 
 ## Architecture
 
@@ -114,35 +117,95 @@ Follow the proxy-specific guides in the `docs/` directory:
 ### 4. Connect IoT Device
 
 1. Power on your Raspberry Pi
-2. Connect your IoT device to the WiFi AP (SSID: `MitM-Pi` by default)
+2. Connect your IoT device to the WiFi AP (SSID: `MitM-Pi`, password: `changeme123`)
 3. Start capturing traffic in your proxy tool
 4. Interact with your IoT device
+
+### 5. Install Certificate on Mobile Devices (Optional)
+
+For testing mobile apps, install the proxy CA certificate:
+
+```bash
+# Automated installation for Android
+cd analysis-setup
+./install-burp-cert-android.sh
+```
+
+See [docs/android-certificate-install.md](docs/android-certificate-install.md) for complete instructions.
+
+## Traffic Capture
+
+### Capture Network Traffic
+
+```bash
+# Capture encrypted traffic between analysis machine and Pi
+cd analysis-setup
+./capture-traffic.sh network
+
+# Capture proxy processing on loopback
+./capture-traffic.sh proxy
+
+# Capture both simultaneously
+./capture-traffic.sh both
+```
+
+Captures are saved to `~/Desktop/mitm-captures/` and can be analyzed in Wireshark.
+
+### Capture with mitmproxy (Recommended for Automation)
+
+```bash
+# Install mitmproxy
+brew install mitmproxy  # macOS
+# or: sudo apt install mitmproxy  # Linux
+
+# Start capture with web interface
+cd analysis-setup
+./capture-mitmproxy.sh -w
+
+# Web interface: http://localhost:8081
+
+# With security analysis (detects API keys, passwords, tokens)
+./capture-mitmproxy.sh -s
+
+# Headless mode (for automation)
+./capture-mitmproxy.sh
+```
+
+Flows are saved in multiple formats:
+- `.dump` - mitmproxy native format
+- `.har` - HTTP Archive (standard)
+- `_security.json` - Security findings (if `-s` used)
+
+View saved flows:
+```bash
+mitmweb -r ~/Desktop/mitm-captures/flows-*.dump
+```
 
 ## Project Structure
 
 ```
 MitM-Pi/
 ├── README.md
-├── LICENSE
 ├── .gitignore
-├── pi-setup/              # Raspberry Pi setup scripts and configs
-│   ├── setup.sh
-│   ├── configs/
-│   │   ├── hostapd.conf
-│   │   ├── dnsmasq.conf
-│   │   └── routing-rules.sh
-│   └── docs/
-├── analysis-setup/        # Analysis machine setup scripts
-│   ├── setup-macos.sh
-│   ├── setup-ubuntu.sh
+├── pi-setup/                          # Raspberry Pi setup scripts and configs
+│   ├── setup.sh                       # Automated Pi configuration
+│   ├── uninstall.sh                   # Reset Pi to normal configuration
 │   └── configs/
-├── docs/                  # Documentation
-│   ├── architecture.md
-│   ├── burp-setup.md
-│   ├── mitmproxy-setup.md
-│   ├── troubleshooting.md
-│   └── testing-guide.md
-└── examples/              # Example configurations and test cases
+│       ├── hostapd.conf              # WiFi AP configuration
+│       ├── dnsmasq.conf              # DHCP/DNS configuration
+│       └── routing-rules.sh          # iptables routing rules
+├── analysis-setup/                    # Analysis machine scripts
+│   ├── install-burp-cert-android.sh  # Android certificate installer
+│   ├── capture-traffic.sh            # Packet capture (network/proxy modes)
+│   └── capture-mitmproxy.sh          # mitmproxy with security analysis
+├── docs/                              # Documentation
+│   ├── kali-installation.md          # Complete Kali ARM setup guide
+│   ├── alfa-awus1900-driver.md       # ALFA WiFi adapter driver installation
+│   ├── burp-setup.md                 # Burp Suite configuration
+│   ├── mitmproxy-setup.md            # mitmproxy setup and usage
+│   ├── android-certificate-install.md # Android cert installation methods
+│   └── testing-guide.md              # Testing procedures and test URLs
+└── examples/                          # Example configurations (future)
 ```
 
 ## Configuration
@@ -151,29 +214,49 @@ MitM-Pi/
 
 The default configuration creates a WiFi AP with:
 - **SSID:** `MitM-Pi`
-- **Password:** `changeme123` (⚠️ Change this!)
+- **Password:** `changeme123` (⚠️ **Change this in production!**)
 - **IP Range:** 192.168.100.1/24
+- **Channel:** 6 (2.4GHz)
 
 Edit `pi-setup/configs/hostapd.conf` to customize.
 
 ### Proxy Routing
 
-By default, all traffic is forwarded to:
-- **Analysis Machine IP:** 192.168.1.100 (configure in setup)
-- **Proxy Port:** 8080 (Burp default) or 8080 (mitmproxy default)
+By default, all traffic is forwarded to your analysis machine on port 8080. The setup script will automatically detect your analysis machine's IP address.
 
-Edit `pi-setup/configs/routing-rules.sh` to customize.
+Edit `pi-setup/configs/routing-rules.sh` to customize routing behavior.
+
+## Documentation
+
+Complete guides available in the `docs/` directory:
+
+- **[Kali Installation](docs/kali-installation.md)** - Complete headless Kali ARM setup for RPi5
+- **[ALFA AWUS1900 Driver](docs/alfa-awus1900-driver.md)** - WiFi adapter driver installation
+- **[Burp Suite Setup](docs/burp-setup.md)** - Burp configuration for transparent proxying
+- **[mitmproxy Setup](docs/mitmproxy-setup.md)** - mitmproxy installation, scripting, and automation
+- **[Android Certificates](docs/android-certificate-install.md)** - User and system certificate installation
+- **[Testing Guide](docs/testing-guide.md)** - Test procedures and validation
 
 ## Known Limitations
 
-- **Certificate Pinning:** Apps with certificate pinning will fail unless you can install custom root certificates
+- **Certificate Pinning:** Apps with strict certificate pinning require system-level certificate installation
+  - User-level certificates work for most apps (browsers, many IoT apps)
+  - System-level installation on modern Android (14+) requires custom ROM with `adb root` support
+  - See [docs/android-certificate-install.md](docs/android-certificate-install.md) for details
 - **Mutual TLS:** Client certificate authentication may not work in all scenarios
 - **UDP Traffic:** Currently focused on TCP/HTTP/HTTPS traffic
-- **Performance:** Not designed for high-bandwidth connections
+- **Performance:** Not designed for high-bandwidth streaming; suitable for IoT device analysis
 
 ## Troubleshooting
 
-See [docs/troubleshooting.md](docs/troubleshooting.md) for common issues and solutions.
+**Common Issues:**
+
+- **"Can't find Pi on network"** - Use `arp-scan` or check your router's DHCP leases
+- **"WiFi AP not appearing"** - Check if ALFA driver is installed correctly with `iwconfig`
+- **"No traffic in proxy"** - Verify routing rules with `sudo iptables -t nat -L -n -v`
+- **"HTTPS errors"** - Ensure proxy CA certificate is installed on test device
+
+For detailed troubleshooting, see the documentation in the `docs/` directory.
 
 ## Contributing
 
@@ -182,24 +265,32 @@ Contributions are welcome! Please open an issue or pull request for:
 - New features
 - Documentation improvements
 - Additional proxy tool integrations
+- New capture modes or analysis scripts
 
-## References
+## References and Inspiration
 
-This project is inspired by and builds upon:
+This project builds upon excellent work by the security research community:
 - [Pi-MITM by Gareth](https://www.gareth.co.uk/pi-mitm/)
 - [YouTube: IoT MITM Setup](https://www.youtube.com/watch?v=e6yvNJnGRM8)
+- [mitmproxy Project](https://mitmproxy.org/)
+- [PortSwigger Burp Suite](https://portswigger.net/burp)
 
 ## License
 
-[Choose appropriate license - MIT recommended for open source]
+MIT License - See LICENSE file for details.
+
+This project is provided for educational and authorized security testing purposes only.
 
 ## Acknowledgments
 
 - Raspberry Pi Foundation
 - PortSwigger (Burp Suite)
 - mitmproxy project
-- The security research community
+- The security research and ethical hacking community
+- ALFA Network (AWUS1900 USB WiFi adapter)
 
 ---
 
-**Remember:** Only use this tool on devices you own or have explicit permission to test. Happy (ethical) hacking! 🔐
+**⚠️ Important:** Only use this tool on devices and networks you own or have explicit written permission to test. Unauthorized interception of network traffic may be illegal in your jurisdiction. Always follow responsible disclosure practices.
+
+**Happy (ethical) hacking! 🔐**
