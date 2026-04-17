@@ -66,10 +66,17 @@ wheels/
 *.crt
 *.p12
 *.pfx
+*.der
+*.0
 secrets/
 credentials/
 .env
 .env.local
+
+# Burp Suite certificates (user-specific)
+burp-ca-cert.*
+9a5ba575.0
+**/burp-cert.*
 
 # Packet captures (can be large)
 *.pcap

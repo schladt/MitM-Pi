@@ -140,6 +140,11 @@ Your listener should show:
 
 For HTTPS interception, devices need to trust Burp's CA certificate.
 
+### Quick Links
+
+- **[Android Certificate Installation Guide](android-certificate-install.md)** - Comprehensive guide for Android devices (user and system certificates)
+- Automated script: `analysis-setup/install-burp-cert-android.sh`
+
 ### Export Burp CA Certificate
 
 1. In Burp, go to **Proxy → Proxy settings**
