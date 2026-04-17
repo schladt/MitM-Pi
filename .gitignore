@@ -1,0 +1,88 @@
+# Project-specific exclusions
+memory-bank/
+AGENTS.md
+
+# IDE and editor directories
+.cursor/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git directory (shouldn't be needed but included for completeness)
+.git/
+
+# GitHub workflows and copilot instructions (private configuration)
+.github/
+
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Linux system files
+*~
+.directory
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Secrets and credentials
+*.key
+*.pem
+*.crt
+*.p12
+*.pfx
+secrets/
+credentials/
+.env
+.env.local
+
+# Packet captures (can be large)
+*.pcap
+*.pcapng
+*.cap
+captures/
+
+# Burp Suite files
+*.burp
+burp-*.jar
+
+# Configuration overrides (user-specific)
+*-local.conf
+*-local.yaml
+*-local.json
+local-config/
