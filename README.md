@@ -265,14 +265,17 @@ Complete guides available in the `docs/` directory:
 - **[Burp Suite Setup](docs/burp-setup.md)** - Burp configuration for transparent proxying
 - **[mitmproxy Setup](docs/mitmproxy-setup.md)** - mitmproxy installation, scripting, and automation
 - **[Android Certificates](docs/android-certificate-install.md)** - User and system certificate installation
+- **[Android Rooting Strategy](docs/android-rooting-strategy.md)** - Comprehensive guide for LineageOS/custom ROM setup for system certificates
 - **[Testing Guide](docs/testing-guide.md)** - Test procedures and validation
 
 ## Known Limitations
 
 - **Certificate Pinning:** Apps with strict certificate pinning require system-level certificate installation
   - User-level certificates work for most apps (browsers, many IoT apps)
-  - System-level installation on modern Android (14+) requires custom ROM with `adb root` support
-  - See [docs/android-certificate-install.md](docs/android-certificate-install.md) for details
+  - System-level installation on modern Android (14+) requires custom ROM with root access
+  - **Recommended:** Use LineageOS with root add-on for reliable system certificate support
+  - See [Android Rooting Strategy](docs/android-rooting-strategy.md) for comprehensive device setup guide
+  - See [Android Certificates](docs/android-certificate-install.md) for installation methods
 - **Mutual TLS:** Client certificate authentication may not work in all scenarios
 - **UDP Traffic:** Currently focused on TCP/HTTP/HTTPS traffic
 - **Performance:** Not designed for high-bandwidth streaming; suitable for IoT device analysis
